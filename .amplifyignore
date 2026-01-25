@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.next/cache/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+README.md
+AWS_DEPLOYMENT.md
+
+# Database scripts (not needed in production)
+database/
+*.sql
+
+# Test files
+test_db_connection.js
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+
