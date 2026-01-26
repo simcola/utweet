@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
       username: row.username,
       email: row.email,
       location: row.location,
+      species: row.species || null,
+      airesponse: row.airesponse || null,
       likes: parseInt(row.like_count) || 0,
       approved: row.approved,
       created_at: row.created_at,
