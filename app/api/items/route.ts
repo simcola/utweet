@@ -47,9 +47,21 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching items:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorDetails = process.env.NODE_ENV === 'development' 
-      ? { error: errorMessage, stack: error instanceof Error ? error.stack : undefined }
-      : { error: 'Failed to fetch items' };
+    const errorCode = error instanceof Error && 'code' in error ? (error as any).code : undefined;
+    
+    // Return more details even in production for debugging
+    const errorDetails = {
+      error: 'Failed to fetch items',
+      message: errorMessage,
+      code: errorCode,
+      hint: errorCode === 'ECONNREFUSED' 
+        ? 'Database connection refused. Check DATABASE_URL and RDS security group.'
+        : errorCode === '28P01' 
+        ? 'Authentication failed. Check DATABASE_URL username and password.'
+        : errorCode === '3D000'
+        ? 'Database does not exist. Check DATABASE_URL database name.'
+        : 'Check CloudWatch logs for more details.'
+    };
     
     return NextResponse.json(
       errorDetails,
