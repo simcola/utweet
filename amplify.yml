@@ -4,6 +4,8 @@ frontend:
     preBuild:
       commands:
         - npm install
+        - echo "Checking environment variables..."
+        - echo "DATABASE_URL is set: $([ -n "$DATABASE_URL" ] && echo 'YES' || echo 'NO')"
     build:
       commands:
         - npm run build
