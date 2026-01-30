@@ -18,6 +18,19 @@ function getClientIP(request: NextRequest): string {
 // GET - List approved photos from last 30 days
 export async function GET(request: NextRequest) {
   try {
+    // Check if photos table exists
+    const tableCheck = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'photos'
+      );
+    `);
+    
+    if (!tableCheck.rows[0].exists) {
+      // Photos table doesn't exist, return empty array
+      return NextResponse.json([]);
+    }
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'month' for photo of the month, null for gallery
     
@@ -107,8 +120,12 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(photos);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching photos:', error);
+    // If table doesn't exist, return empty array instead of error
+    if (error.code === '42P01') {
+      return NextResponse.json([]);
+    }
     return NextResponse.json(
       { error: 'Failed to fetch photos' },
       { status: 500 }
