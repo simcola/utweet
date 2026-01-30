@@ -75,6 +75,15 @@ export default function Home() {
           categories: Array.isArray(categoriesData) ? categoriesData.length : 0,
           items: Array.isArray(itemsData) ? itemsData.length : 0,
         });
+        
+        // Debug: Log category and item associations
+        if (Array.isArray(categoriesData) && Array.isArray(itemsData)) {
+          console.log('Categories:', categoriesData.map((c: Category) => ({ id: c.id, name: c.name, parent_id: c.parent_id })));
+          console.log('Items by category:', categoriesData.map((c: Category) => {
+            const catItems = itemsData.filter((i: Item) => i.category_id === c.id);
+            return { category: c.name, itemCount: catItems.length, items: catItems.map((i: Item) => ({ id: i.id, title: i.title, is_global: i.is_global, region: i.region?.code })) };
+          }));
+        }
 
         // Ensure regions is always an array
         setRegions(Array.isArray(regionsData) ? regionsData : []);

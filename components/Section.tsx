@@ -15,18 +15,23 @@ export default function Section({ category, items, regionCode, countryCodes }: S
   const regionFiltered = items.filter((item) => {
     if (regionCode === 'ALL') return true;
     if (item.is_global) return true;
+    // If item has no region, include it (fallback for items without region set)
+    if (!item.region) return true;
     return item.region?.code === regionCode;
   });
 
   const filteredItems = regionFiltered.filter((item) => {
     if (countryCodes.length === 0) return true;
     if (item.is_global) return true;
-    return item.country && countryCodes.includes(item.country.code);
+    // If item has no country but country filter is set, exclude it unless it's global
+    if (!item.country) return false;
+    return countryCodes.includes(item.country.code);
   });
 
-  if (filteredItems.length === 0) {
-    return null;
-  }
+  // Show section even if empty, but with a message
+  // if (filteredItems.length === 0) {
+  //   return null;
+  // }
 
   const hasSubcategories = category.subcategories && category.subcategories.length > 0;
   const itemsPerPage = 12;
@@ -44,7 +49,7 @@ export default function Section({ category, items, regionCode, countryCodes }: S
   }, [totalPages, currentPage]);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const pageItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  const pageItems = filteredItems.length > 0 ? filteredItems.slice(startIndex, startIndex + itemsPerPage) : [];
   const placeholderCount = Math.max(0, itemsPerPage - pageItems.length);
   const placeholderNodes = Array.from({ length: placeholderCount }).map((_, idx) => (
     <div
@@ -53,10 +58,6 @@ export default function Section({ category, items, regionCode, countryCodes }: S
       aria-hidden="true"
     />
   ));
-
-  if (pageItems.length === 0) {
-    return null;
-  }
 
   return (
     <section className="rounded-2xl border-2 border-emerald-500/30 bg-emerald-900/40 backdrop-blur-md px-5 py-5 shadow-lg shadow-emerald-950/40 transition-transform duration-200 hover:-translate-y-[2px] hover:shadow-xl hover:shadow-emerald-950/50">
@@ -68,6 +69,12 @@ export default function Section({ category, items, regionCode, countryCodes }: S
           {filteredItems.length} items
         </span>
       </div>
+
+      {filteredItems.length === 0 && (
+        <div className="pt-3 text-center text-emerald-200/70 text-sm">
+          No items found for the selected region/country filter.
+        </div>
+      )}
 
       {hasSubcategories ? (
         <div className="flex-1 pt-3 space-y-3">
