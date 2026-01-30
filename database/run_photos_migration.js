@@ -6,16 +6,28 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
+// Try to load .env.local if it exists
+try {
+  require('dotenv').config({ path: '.env.local' });
+} catch (e) {
+  // dotenv not installed or .env.local doesn't exist - that's ok
+}
+
 async function runMigration() {
-  if (!process.env.DATABASE_URL) {
-    console.error('❌ DATABASE_URL not found in .env.local');
+  const databaseUrl = process.argv[2] || process.env.DATABASE_URL;
+  
+  if (!databaseUrl) {
+    console.error('❌ DATABASE_URL not found.');
+    console.log('\nPlease provide the DATABASE_URL as an argument or in a .env.local file.');
+    console.log('Example: node database/run_photos_migration.js "postgresql://user:pass@host:port/db"');
     process.exit(1);
   }
 
-  console.log('🔌 Connecting to database...');
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    connectionString: databaseUrl,
+    ssl: databaseUrl.includes('rds.amazonaws.com') || process.env.NODE_ENV === 'production' 
+      ? { rejectUnauthorized: false } 
+      : false,
   });
 
   try {

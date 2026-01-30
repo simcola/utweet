@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS categories (
     slug VARCHAR(100) NOT NULL UNIQUE,
     parent_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
     display_order INTEGER DEFAULT 0,
+    column_span INTEGER DEFAULT 1 CHECK (column_span IN (1, 2)),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

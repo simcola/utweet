@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
       id: result.rows[0].id,
       username,
       imageUrl: imageUrl.substring(0, 50) + '...',
-      isAWS
+      isServerless
     });
 
     return NextResponse.json(result.rows[0], { status: 201 });
