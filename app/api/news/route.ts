@@ -161,10 +161,7 @@ async function fetchRSSFeed(feedUrl: string, sourceName: string, isBirdingSite: 
     return items;
   } catch (error) {
     // Silently fail individual feeds to not break the entire process
-    // Only log in development to reduce noise in production logs
-    if (process.env.NODE_ENV === 'development') {
-      console.error(`Error fetching RSS feed ${feedUrl}:`, error);
-    }
+    console.error(`Error fetching RSS feed ${feedUrl}:`, error);
     return [];
   }
 }

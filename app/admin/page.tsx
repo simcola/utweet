@@ -89,12 +89,43 @@ export default function AdminPage() {
         fetch('/api/items'),
       ]);
 
+      // Check for errors
+      if (!categoriesRes.ok) {
+        const errorData = await categoriesRes.json();
+        console.error('Categories API error:', categoriesRes.status, errorData);
+      }
+      if (!regionsRes.ok) {
+        const errorData = await regionsRes.json();
+        console.error('Regions API error:', regionsRes.status, errorData);
+      }
+      if (!itemsRes.ok) {
+        const errorData = await itemsRes.json();
+        console.error('Items API error:', itemsRes.status, errorData);
+      }
+
       const [categoriesData, regionsData, countriesData, itemsData] = await Promise.all([
         categoriesRes.json(),
         regionsRes.json(),
         countriesRes.json(),
         itemsRes.json(),
       ]);
+
+      console.log('Admin fetchData results:', {
+        categories: Array.isArray(categoriesData) ? categoriesData.length : 'not array',
+        categoriesData: categoriesData,
+        regions: Array.isArray(regionsData) ? regionsData.length : 'not array',
+        countries: Array.isArray(countriesData) ? countriesData.length : 'not array',
+        items: Array.isArray(itemsData) ? itemsData.length : 'not array',
+      });
+
+      // Check if responses are error objects
+      if (categoriesData && categoriesData.error) {
+        console.error('Categories API returned error:', categoriesData);
+        alert(`Error loading categories: ${categoriesData.message || categoriesData.error}`);
+      }
+      if (itemsData && itemsData.error) {
+        console.error('Items API returned error:', itemsData);
+      }
 
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setRegions(Array.isArray(regionsData) ? regionsData.filter((r: Region) => r.code !== 'ALL') : []);
@@ -117,7 +148,29 @@ export default function AdminPage() {
       }
 
       const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Photos API error:', response.status, errorData);
+        setPhotos([]);
+        return;
+      }
+
       const data = await response.json();
+      console.log('Admin fetchPhotos result:', {
+        count: Array.isArray(data) ? data.length : 'not array',
+        filter: photoFilter,
+        data: Array.isArray(data) ? data : data
+      });
+
+      // Check if response is an error object
+      if (data && data.error) {
+        console.error('Photos API returned error:', data);
+        alert(`Error loading photos: ${data.message || data.error}`);
+        setPhotos([]);
+        return;
+      }
+
       setPhotos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching photos:', error);
@@ -834,6 +887,17 @@ export default function AdminPage() {
             )}
 
             <div className="bg-emerald-900/40 backdrop-blur-md rounded-lg border border-emerald-500/20 p-6">
+              {mainCategories.length === 0 ? (
+                <div className="p-8 text-center text-emerald-200/70">
+                  <p className="mb-2">No categories found.</p>
+                  <p className="text-sm text-emerald-300/50">
+                    Total categories in database: {categories.length}
+                  </p>
+                  <p className="text-sm text-emerald-300/50 mt-2">
+                    Click "Add Category" above to create your first category.
+                  </p>
+                </div>
+              ) : (
               <div className="space-y-6">
                 {mainCategories.map((category) => (
                   <div key={category.id} className="border-b border-emerald-500/20 pb-4 last:border-b-0">
@@ -892,6 +956,7 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
+              )}
             </div>
           </div>
         )}
