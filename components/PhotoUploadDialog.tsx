@@ -86,12 +86,18 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
       formData.append('location', location);
       formData.append('species', species);
 
+      console.log('Uploading photo...', { username, email, fileSize: file.size, fileName: file.name });
+
       const response = await fetch('/api/photos', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Upload response status:', response.status, response.statusText);
+
       if (response.ok) {
+        const data = await response.json();
+        console.log('Photo uploaded successfully:', data);
         onSuccess();
         // Reset form
         setUsername('');
@@ -104,12 +110,19 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
           fileInputRef.current.value = '';
         }
       } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to upload photo');
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || `Upload failed with status ${response.status}` };
+        }
+        console.error('Upload failed:', response.status, errorData);
+        setError(errorData.error || errorData.message || `Failed to upload photo (${response.status})`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading photo:', error);
-      setError('Failed to upload photo. Please try again.');
+      setError(error.message || 'Failed to upload photo. Please try again.');
     } finally {
       setUploading(false);
     }

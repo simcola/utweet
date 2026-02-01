@@ -204,6 +204,9 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(bytes);
       const base64 = buffer.toString('base64');
       const dataUrl = `data:${file.type};base64,${base64}`;
+      
+      // Base64 images can be very long - ensure column is TEXT type, not VARCHAR(500)
+      console.log(`Base64 image is ${dataUrl.length} characters (column should be TEXT, not VARCHAR(500))`);
       imageUrl = dataUrl;
       
       console.log('Serverless environment detected - storing image as base64');
@@ -254,14 +257,24 @@ export async function POST(request: NextRequest) {
       isServerless
     });
 
-    return NextResponse.json(result.rows[0], { status: 201 });
+    const uploadedPhoto = result.rows[0];
+    console.log('Photo uploaded successfully to database:', {
+      id: uploadedPhoto.id,
+      username: uploadedPhoto.username,
+      approved: uploadedPhoto.approved
+    });
+
+    return NextResponse.json(uploadedPhoto, { status: 201 });
   } catch (error) {
     console.error('Error uploading photo:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorCode = error instanceof Error && 'code' in error ? (error as any).code : undefined;
+    
     return NextResponse.json(
       { 
         error: 'Failed to upload photo',
         message: errorMessage,
+        code: errorCode,
         details: process.env.NODE_ENV === 'development' ? (error as any).stack : undefined
       },
       { status: 500 }
