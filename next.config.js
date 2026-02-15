@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Your other config here if any...
+  // Allow larger request bodies (fixes 413 on uploads; AWS may still impose platform limits)
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   webpack(config) {
     config.resolve.alias['@'] = __dirname;  // Maps @/ to project root
     // Alternative more explicit version:
