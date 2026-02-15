@@ -139,7 +139,7 @@ export default function PhotoGallery() {
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleGrokClick(photoOfMonth); }}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-700 text-white hover:bg-purple-600 active:bg-purple-800 transition-colors touch-manipulation text-sm"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-700 text-white border border-purple-600 hover:bg-purple-600 active:bg-purple-800 transition-colors touch-manipulation text-sm"
                     >
                       <Sparkles size={14} />
                       AiID
@@ -148,10 +148,10 @@ export default function PhotoGallery() {
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleLike(photoOfMonth.id); }}
                       disabled={photoOfMonth.is_liked}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors touch-manipulation text-sm ${
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors touch-manipulation text-sm border ${
                         photoOfMonth.is_liked
-                          ? 'bg-emerald-800/50 text-emerald-300 cursor-not-allowed'
-                          : 'bg-emerald-700 text-white hover:bg-emerald-600 active:bg-emerald-800'
+                          ? 'bg-emerald-800 text-emerald-100 border-emerald-600 cursor-not-allowed'
+                          : 'bg-emerald-700 text-white border-emerald-600 hover:bg-emerald-600 active:bg-emerald-800'
                       }`}
                     >
                       <Heart size={14} fill={photoOfMonth.is_liked ? 'currentColor' : 'none'} />
@@ -242,8 +242,9 @@ export default function PhotoGallery() {
                   <span className="sm:hidden">Upload</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowGallery(false)}
-                  className="text-emerald-200 hover:text-white transition-colors p-2 -mr-2 touch-manipulation"
+                  className="rounded-md p-2 -mr-2 touch-manipulation bg-emerald-800/90 text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors border border-emerald-600/50"
                   aria-label="Close gallery"
                 >
                   <X size={24} />
@@ -289,7 +290,7 @@ export default function PhotoGallery() {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => handleGrokClick(photo)}
-                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-700 text-white hover:bg-purple-600 active:bg-purple-800 transition-colors touch-manipulation"
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-700 text-white border border-purple-600 hover:bg-purple-600 active:bg-purple-800 transition-colors touch-manipulation"
                               >
                                 <Sparkles size={14} />
                                 <span className="text-sm">AiID</span>
@@ -297,10 +298,10 @@ export default function PhotoGallery() {
                               <button
                                 onClick={() => handleLike(photo.id)}
                                 disabled={photo.is_liked}
-                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors touch-manipulation ${
+                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition-colors touch-manipulation border ${
                                   photo.is_liked
-                                    ? 'bg-emerald-800/50 text-emerald-300 cursor-not-allowed'
-                                    : 'bg-emerald-700 text-white hover:bg-emerald-600 active:bg-emerald-800'
+                                    ? 'bg-emerald-800 text-emerald-100 border-emerald-600 cursor-not-allowed'
+                                    : 'bg-emerald-700 text-white border-emerald-600 hover:bg-emerald-600 active:bg-emerald-800'
                                 }`}
                               >
                                 <Heart size={14} fill={photo.is_liked ? 'currentColor' : 'none'} />

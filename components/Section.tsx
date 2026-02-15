@@ -121,7 +121,7 @@ export default function Section({ category, items, regionCode, countryCodes }: S
               type="button"
               onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
               disabled={currentPage === 1}
-              className="rounded-lg border-2 border-emerald-500/40 bg-emerald-950/60 px-4 py-1.5 text-sm font-semibold text-emerald-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:border-emerald-400/60 hover:bg-emerald-900/60 hover:shadow-sm"
+              className="rounded-lg border-2 border-emerald-600 bg-emerald-800 px-4 py-1.5 text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 hover:border-emerald-500 active:bg-emerald-900"
             >
               Prev
             </button>
@@ -129,7 +129,7 @@ export default function Section({ category, items, regionCode, countryCodes }: S
               type="button"
               onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
               disabled={currentPage === totalPages}
-              className="rounded-lg border-2 border-emerald-500/40 bg-emerald-950/60 px-4 py-1.5 text-sm font-semibold text-emerald-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:border-emerald-400/60 hover:bg-emerald-900/60 hover:shadow-sm"
+              className="rounded-lg border-2 border-emerald-600 bg-emerald-800 px-4 py-1.5 text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 hover:border-emerald-500 active:bg-emerald-900"
             >
               Next
             </button>

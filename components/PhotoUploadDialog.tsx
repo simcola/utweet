@@ -33,28 +33,93 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      if (!selectedFile.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-      if (selectedFile.size > 10 * 1024 * 1024) {
-        setError('File size must be less than 10MB');
-        return;
-      }
-      setFile(selectedFile);
-      setError('');
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result as string);
+  // Compress image to stay under ~1MB (avoids 413 on AWS Amplify / Lambda limits)
+  const compressImage = (sourceFile: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(sourceFile);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const maxDim = 1600;
+        const quality = 0.82;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width >= height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(sourceFile);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(sourceFile);
+              return;
+            }
+            const name = sourceFile.name.replace(/\.[^.]+$/, '.jpg');
+            resolve(new File([blob], name, { type: 'image/jpeg' }));
+          },
+          'image/jpeg',
+          quality
+        );
       };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load image'));
+      };
+      img.src = url;
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    if (!selectedFile.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
+      return;
+    }
+    setError('');
+    // Compress if over ~900KB so upload stays under 1MB on AWS
+    const targetMaxBytes = 900 * 1024;
+    if (selectedFile.size > targetMaxBytes) {
+      setCompressing(true);
+      try {
+        const compressed = await compressImage(selectedFile);
+        setFile(compressed);
+        const reader = new FileReader();
+        reader.onloadend = () => setPreview(reader.result as string);
+        reader.readAsDataURL(compressed);
+      } catch {
+        setFile(selectedFile);
+        const reader = new FileReader();
+        reader.onloadend = () => setPreview(reader.result as string);
+        reader.readAsDataURL(selectedFile);
+      } finally {
+        setCompressing(false);
+      }
+    } else {
+      setFile(selectedFile);
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result as string);
       reader.readAsDataURL(selectedFile);
     }
   };
@@ -140,8 +205,9 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-emerald-500/20 sticky top-0 bg-emerald-900/95 backdrop-blur-md z-10">
           <h2 className="text-xl sm:text-2xl font-semibold text-white">Upload Photo</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-emerald-200 hover:text-white transition-colors p-2 -mr-2 touch-manipulation"
+            className="rounded-md p-2 -mr-2 touch-manipulation bg-emerald-800/80 text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors border border-emerald-600/50"
             aria-label="Close dialog"
           >
             <X size={24} />
@@ -249,9 +315,12 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
                   </div>
                 )}
               </label>
-              {file && (
+              {compressing && (
+                <p className="text-xs text-emerald-400 mt-1">Compressing image for upload...</p>
+              )}
+              {file && !compressing && (
                 <p className="text-xs text-emerald-300/70">
-                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  Selected: {file.name} ({file.size >= 1024 * 1024 ? `${(file.size / 1024 / 1024).toFixed(2)} MB` : `${(file.size / 1024).toFixed(0)} KB`})
                 </p>
               )}
             </div>
@@ -261,7 +330,7 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
             <button
               type="submit"
               disabled={uploading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 active:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-base sm:text-sm font-semibold"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 rounded-md bg-emerald-600 text-white border border-emerald-500 hover:bg-emerald-700 active:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation text-base sm:text-sm font-semibold"
             >
               {uploading ? (
                 <>
@@ -279,7 +348,7 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
               type="button"
               onClick={onClose}
               disabled={uploading}
-              className="px-4 py-3 sm:py-2 bg-emerald-800/50 text-emerald-200 rounded-md hover:bg-emerald-800/70 active:bg-emerald-800/90 transition-colors disabled:opacity-50 touch-manipulation text-base sm:text-sm font-semibold"
+              className="px-4 py-3 sm:py-2 rounded-md touch-manipulation text-base sm:text-sm font-semibold bg-emerald-800 text-emerald-50 border border-emerald-600 hover:bg-emerald-700 hover:text-white active:bg-emerald-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>

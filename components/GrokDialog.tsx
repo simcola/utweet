@@ -59,8 +59,9 @@ export default function GrokDialog({ isOpen, onClose, imageUrl, photoId }: GrokD
         <div className="sticky top-0 bg-emerald-900/95 backdrop-blur-md border-b border-emerald-500/20 p-4 flex items-center justify-between">
           <h2 className="text-2xl font-semibold text-white">AiID - Bird Identification</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-emerald-200 hover:text-white transition-colors"
+            className="rounded-md p-2 bg-emerald-800/90 text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors border border-emerald-600/50"
           >
             <X size={24} />
           </button>
@@ -90,8 +91,9 @@ export default function GrokDialog({ isOpen, onClose, imageUrl, photoId }: GrokD
               <p className="text-red-200 font-medium">Error</p>
               <p className="text-red-300/70 text-sm mt-1">{error}</p>
               <button
+                type="button"
                 onClick={identifyBird}
-                className="mt-4 px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-600 transition-colors"
+                className="mt-4 px-4 py-2 rounded-md bg-red-700 text-white border border-red-600 hover:bg-red-600 active:bg-red-800 transition-colors"
               >
                 Try Again
               </button>

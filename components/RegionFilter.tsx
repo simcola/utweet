@@ -108,11 +108,12 @@ export default function RegionFilter({
                 >
                   <span>{name}</span>
                   <button
+                    type="button"
                     onClick={() => onCountryRemove(code)}
-                    className="hover:bg-emerald-600/50 rounded-full p-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
+                    className="rounded-full p-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-700/80 text-white hover:bg-emerald-600"
                     aria-label={`Remove ${name}`}
                   >
-                    <X size={14} className="text-white" />
+                    <X size={14} />
                   </button>
                 </span>
               ))}
