@@ -80,22 +80,37 @@ export async function GET(request: NextRequest) {
         is_liked: likeCheck.rows.length > 0,
       });
     } else {
-      // Get all approved photos from last 30 days
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const result = await pool.query(
-        `SELECT 
-          p.*,
-          COUNT(pl.id) as like_count
-        FROM photos p
-        LEFT JOIN photo_likes pl ON p.id = pl.photo_id
-        WHERE p.approved = true 
-          AND p.created_at >= $1
-        GROUP BY p.id
-        ORDER BY p.created_at DESC`,
-        [thirtyDaysAgo]
-      );
+      // Get approved photos: optional ?all=1 for all time, otherwise last 30 days
+      const showAll = searchParams.get('all') === '1';
+
+      let result;
+      if (showAll) {
+        result = await pool.query(
+          `SELECT 
+            p.*,
+            COUNT(pl.id) as like_count
+          FROM photos p
+          LEFT JOIN photo_likes pl ON p.id = pl.photo_id
+          WHERE p.approved = true
+          GROUP BY p.id
+          ORDER BY p.created_at DESC`
+        );
+      } else {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        result = await pool.query(
+          `SELECT 
+            p.*,
+            COUNT(pl.id) as like_count
+          FROM photos p
+          LEFT JOIN photo_likes pl ON p.id = pl.photo_id
+          WHERE p.approved = true 
+            AND p.created_at >= $1
+          GROUP BY p.id
+          ORDER BY p.created_at DESC`,
+          [thirtyDaysAgo]
+        );
+      }
 
       const clientIP = getClientIP(request);
       

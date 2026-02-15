@@ -11,21 +11,13 @@ interface PhotoUploadDialogProps {
 export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Close on Escape key
+  // Close on Escape key (no body scroll lock - keeps page scroll working)
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handleEscape);
-    // Prevent body scroll when modal is open
-    document.body.style.overflow = 'hidden';
-    
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
+    return () => document.removeEventListener('keydown', handleEscape);
   }, [onClose]);
 
   // Close when clicking outside the dialog
@@ -240,11 +232,12 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
                 className="flex items-center justify-center w-full px-4 py-8 sm:py-8 bg-emerald-950/50 border-2 border-dashed border-emerald-500/30 rounded-md cursor-pointer hover:border-emerald-500/50 active:border-emerald-500/70 transition-colors touch-manipulation"
               >
                 {preview ? (
-                  <div className="relative w-full">
+                  <div className="relative w-full flex justify-center">
                     <img
                       src={preview}
                       alt="Preview"
-                      className="max-h-64 mx-auto rounded-md"
+                      className="object-contain rounded-md"
+                      style={{ maxWidth: 250, maxHeight: 200 }}
                     />
                   </div>
                 ) : (
