@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     const photos: Photo[] = result.rows.map((row: any) => ({
       id: row.id,
-      image_url: row.image_url,
+      image_url: row.image_url?.startsWith('data:') ? `/api/photos/${row.id}/image` : (row.image_url ?? ''),
       username: row.username,
       email: row.email,
       location: row.location,

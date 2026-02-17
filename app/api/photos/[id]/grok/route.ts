@@ -176,7 +176,12 @@ export async function POST(
     // Fetch the image
     let imageBuffer: Buffer;
     try {
-      if (imageUrl.startsWith('http')) {
+      if (imageUrl.startsWith('data:')) {
+        const match = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+        if (!match) throw new Error('Invalid data URL');
+        imageBuffer = Buffer.from(match[2], 'base64');
+        console.log('Using inline base64 image, size:', imageBuffer.length);
+      } else if (imageUrl.startsWith('http')) {
         // External URL - fetch it
         console.log('Fetching external image from:', fullImageUrl);
         const controller = new AbortController();

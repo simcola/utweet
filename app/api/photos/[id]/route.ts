@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
-// GET - Get a single photo (for admin)
+// GET - Get a single photo (for admin); use proxy URL for base64 to avoid large payload
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -17,7 +17,11 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(result.rows[0]);
+    const photo = result.rows[0];
+    if (typeof photo.image_url === 'string' && photo.image_url.startsWith('data:')) {
+      photo.image_url = `/api/photos/${photoId}/image`;
+    }
+    return NextResponse.json(photo);
   } catch (error) {
     console.error('Error fetching photo:', error);
     return NextResponse.json(
@@ -111,7 +115,11 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json(result.rows[0]);
+    const photo = result.rows[0];
+    if (typeof photo.image_url === 'string' && photo.image_url.startsWith('data:')) {
+      photo.image_url = `/api/photos/${photoId}/image`;
+    }
+    return NextResponse.json(photo);
   } catch (error) {
     console.error('Error updating photo:', error);
     return NextResponse.json(

@@ -15,6 +15,13 @@ function getClientIP(request: NextRequest): string {
   return ip.trim();
 }
 
+// Return a small URL for list responses to avoid 413 (response too large) when image_url is base64
+function imageUrlForResponse(id: number, storedUrl: string | null): string {
+  if (!storedUrl) return '';
+  if (storedUrl.startsWith('data:')) return `/api/photos/${id}/image`;
+  return storedUrl;
+}
+
 // GET - List approved photos from last 30 days
 export async function GET(request: NextRequest) {
   try {
@@ -74,6 +81,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         ...photo,
+        image_url: imageUrlForResponse(photo.id, photo.image_url),
         species: photo.species,
         airesponse: photo.airesponse,
         likes: actualLikeCount,
@@ -123,7 +131,7 @@ export async function GET(request: NextRequest) {
 
       const photos: Photo[] = result.rows.map((row: any) => ({
         id: row.id,
-        image_url: row.image_url,
+        image_url: imageUrlForResponse(row.id, row.image_url),
         username: row.username,
         email: row.email,
         location: row.location,
