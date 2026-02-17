@@ -16,6 +16,13 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* Prevent white-on-white buttons: buttons without an explicit background
+   inherit the page background and text color instead of browser defaults. */
+button {
+  background-color: transparent;
+  color: inherit;
+}
+
 .text-balance {
   text-wrap: balance;
 }

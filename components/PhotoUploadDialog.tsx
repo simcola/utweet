@@ -37,15 +37,15 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Compress image to stay under ~1MB (avoids 413 on AWS Amplify / Lambda limits)
-  const compressImage = (sourceFile: File): Promise<File> => {
+  // Compress image so request body stays under 1MB (avoids 413 on Amplify/Lambda)
+  const compressImage = (sourceFile: File, options?: { maxDim?: number; quality?: number }): Promise<File> => {
+    const maxDim = options?.maxDim ?? 1200;
+    const quality = options?.quality ?? 0.72;
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(sourceFile);
       img.onload = () => {
         URL.revokeObjectURL(url);
-        const maxDim = 1600;
-        const quality = 0.82;
         let { width, height } = img;
         if (width > maxDim || height > maxDim) {
           if (width >= height) {
@@ -98,12 +98,19 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
       return;
     }
     setError('');
-    // Compress if over ~900KB so upload stays under 1MB on AWS
-    const targetMaxBytes = 900 * 1024;
+    // Keep under 500KB so upload + FormData overhead stays under 1MB (avoids 413 on Amplify)
+    const targetMaxBytes = 500 * 1024;
     if (selectedFile.size > targetMaxBytes) {
       setCompressing(true);
       try {
-        const compressed = await compressImage(selectedFile);
+        let compressed = await compressImage(selectedFile);
+        if (compressed.size > targetMaxBytes) {
+          compressed = await compressImage(compressed, { maxDim: 900, quality: 0.58 });
+        }
+        if (compressed.size > targetMaxBytes) {
+          setError('Image is too large for upload. Please choose a smaller photo (e.g. under 2MB).');
+          return;
+        }
         setFile(compressed);
         const reader = new FileReader();
         reader.onloadend = () => setPreview(reader.result as string);
@@ -175,7 +182,8 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
           errorData = { error: errorText || `Upload failed with status ${response.status}` };
         }
         console.error('Upload failed:', response.status, errorData);
-        setError(errorData.error || errorData.message || `Failed to upload photo (${response.status})`);
+        const msg = errorData.error || errorData.message || `Failed to upload photo (${response.status})`;
+        setError(errorData.hint ? `${msg}. ${errorData.hint}` : msg);
       }
     } catch (error: any) {
       console.error('Error uploading photo:', error);

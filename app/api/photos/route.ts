@@ -198,60 +198,44 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now();
     const filename = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     
+    // Read file once (FormData file can only be consumed once in some runtimes)
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
     // Check if we're on AWS Lambda/Amplify or other serverless platform
     // On serverless, filesystem is read-only except /tmp, and /tmp is ephemeral
-    // So we'll always use base64 storage on serverless platforms
     const cwd = process.cwd();
     const isServerless = !!(
-      process.env.AWS_LAMBDA_FUNCTION_NAME || 
-      process.env.AWS_EXECUTION_ENV || 
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.AWS_EXECUTION_ENV ||
+      process.env.AWS_REGION ||           // Set on any AWS Lambda/Amplify
+      process.env.AMPLIFY === 'true' ||   // Amplify Hosting
       process.env.VERCEL ||
-      cwd.startsWith('/tmp') ||  // AWS Lambda uses /tmp/app
-      cwd.includes('/tmp/')      // Other serverless platforms
+      cwd.startsWith('/tmp') ||
+      cwd.includes('/tmp/')
     );
-    
+
     let imageUrl: string;
-    
+
     if (isServerless) {
-      // On serverless (AWS Lambda/Amplify/Vercel), convert image to base64 and store in database
-      // This is a temporary solution - for production, use S3
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+      // On serverless (AWS Lambda/Amplify/Vercel), store as base64 in DB
       const base64 = buffer.toString('base64');
       const dataUrl = `data:${file.type};base64,${base64}`;
-      
-      // Base64 images can be very long - ensure column is TEXT type, not VARCHAR(500)
-      console.log(`Base64 image is ${dataUrl.length} characters (column should be TEXT, not VARCHAR(500))`);
       imageUrl = dataUrl;
-      
-      console.log('Serverless environment detected - storing image as base64');
+      if (dataUrl.length > 100000) {
+        console.log(`Base64 image length: ${dataUrl.length}. Ensure photos.image_url is TEXT, not VARCHAR(500).`);
+      }
     } else {
-      // Local development - try to save to public/uploads
-      // But if it fails (e.g., on serverless that wasn't detected), fall back to base64
+      // Local development - try to save to public/uploads; fall back to base64 if write fails
       try {
+        if (cwd.startsWith('/tmp')) throw new Error('Cannot write to /tmp');
         const uploadsDir = join(process.cwd(), 'public', 'uploads');
-        
-        // Double-check: if we're in /tmp, don't try to create directories
-        if (cwd.startsWith('/tmp')) {
-          throw new Error('Cannot write to /tmp directory structure');
-        }
-        
-        if (!existsSync(uploadsDir)) {
-          await mkdir(uploadsDir, { recursive: true });
-        }
-        
+        if (!existsSync(uploadsDir)) await mkdir(uploadsDir, { recursive: true });
         const filepath = join(uploadsDir, filename);
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
         await writeFile(filepath, buffer);
-        
         imageUrl = `/uploads/${filename}`;
-        console.log('File saved to:', filepath);
       } catch (fileError: any) {
-        // If file write fails (e.g., on serverless), fall back to base64
-        console.warn('Failed to write file to disk, using base64 storage:', fileError.message);
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+        console.warn('Failed to write file to disk, using base64:', fileError.message);
         const base64 = buffer.toString('base64');
         imageUrl = `data:${file.type};base64,${base64}`;
       }
@@ -280,17 +264,22 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(uploadedPhoto, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading photo:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorCode = error instanceof Error && 'code' in error ? (error as any).code : undefined;
-    
+    const errorMessage = error?.message ?? 'Unknown error';
+    const pgCode = error?.code;
+    const hint =
+      pgCode === '22001'
+        ? 'Database column too small: run migration to change photos.image_url to TEXT (see database/run_image_url_migration.js).'
+        : undefined;
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to upload photo',
         message: errorMessage,
-        code: errorCode,
-        details: process.env.NODE_ENV === 'development' ? (error as any).stack : undefined
+        code: pgCode,
+        hint,
+        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
       },
       { status: 500 }
     );
