@@ -257,13 +257,17 @@ export async function POST(
       mimeType = 'image/gif';
     }
 
-    // Prepare prompt for bird identification
+    // Prepare prompt for bird identification (location and species help narrow down)
     let locationContext = '';
     if (photoLocation) {
       locationContext = ` The photo was taken in: ${photoLocation}.`;
     }
+    let speciesContext = '';
+    if (existingSpecies) {
+      speciesContext = ` The photographer or a previous identification suggested the species might be: ${existingSpecies}. Use this only as a hint; confirm or correct based on what you see in the image.`;
+    }
 
-    const prompt = `Analyze this bird photograph and provide a detailed identification.${locationContext}
+    const prompt = `Analyze this bird photograph and provide a detailed identification.${locationContext}${speciesContext}
 
 Please provide:
 1. **Most likely species identification** (common name and scientific name if possible)

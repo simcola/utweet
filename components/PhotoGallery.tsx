@@ -16,6 +16,7 @@ export default function PhotoGallery() {
   const [showGrokDialog, setShowGrokDialog] = useState(false);
   const [selectedPhotoForGrok, setSelectedPhotoForGrok] = useState<Photo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [clearingAi, setClearingAi] = useState(false);
   const galleryDialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,17 +75,33 @@ export default function PhotoGallery() {
   }, []);
 
   const handleLike = async (photoId: number) => {
+    // Optimistic update so UI responds immediately
+    if (photoOfMonth?.id === photoId) {
+      setPhotoOfMonth((prev) =>
+        prev ? { ...prev, likes: prev.likes + 1, is_liked: true } : null
+      );
+    }
+    setGalleryPhotos((prev) =>
+      prev.map((p) =>
+        p.id === photoId ? { ...p, likes: p.likes + 1, is_liked: true } : p
+      )
+    );
+
     try {
       const response = await fetch(`/api/photos/${photoId}/like`, {
         method: 'POST',
       });
 
       if (response.ok) {
-        // Refresh both photo of month and gallery
+        // Refetch to stay in sync (and get correct photo of month if it changed)
+        await Promise.all([fetchPhotoOfMonth(), fetchGalleryPhotos(true)]);
+      } else {
+        // Revert optimistic update on failure
         await Promise.all([fetchPhotoOfMonth(), fetchGalleryPhotos(true)]);
       }
     } catch (error) {
       console.error('Error liking photo:', error);
+      await Promise.all([fetchPhotoOfMonth(), fetchGalleryPhotos(true)]);
     }
   };
 
@@ -97,6 +114,25 @@ export default function PhotoGallery() {
   const handleGrokClick = (photo: Photo) => {
     setSelectedPhotoForGrok(photo);
     setShowGrokDialog(true);
+  };
+
+  const handleClearAiData = async () => {
+    if (!confirm('Clear all AiID results? You can run AiID again on each photo after this.')) return;
+    setClearingAi(true);
+    try {
+      const res = await fetch('/api/photos/clear-ai', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || `Cleared AI data for ${data.cleared} photo(s).`);
+        await Promise.all([fetchPhotoOfMonth(), fetchGalleryPhotos(true)]);
+      } else {
+        alert(data.error || 'Failed to clear AI data');
+      }
+    } catch (e) {
+      alert('Failed to clear AI data');
+    } finally {
+      setClearingAi(false);
+    }
   };
 
   const openGallery = () => {
@@ -230,9 +266,17 @@ export default function PhotoGallery() {
               <h2 id="gallery-title" className="text-xl sm:text-2xl font-semibold text-white">Photo Gallery</h2>
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleClearAiData(); }}
+                  disabled={clearingAi}
+                  className="flex items-center gap-1.5 px-2.5 py-2 bg-amber-700 text-white rounded-md hover:bg-amber-600 active:bg-amber-800 disabled:opacity-60 transition-colors touch-manipulation text-sm"
+                  title="Clear all AiID results so you can run identification again on each photo"
+                >
+                  {clearingAi ? 'Clearing…' : 'Reset AiID'}
+                </button>
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    console.log('Upload button clicked');
                     setShowUploadDialog(true);
                   }}
                   className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 active:bg-emerald-800 transition-colors touch-manipulation text-sm sm:text-base"
@@ -340,7 +384,7 @@ export default function PhotoGallery() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.8)',
+            backgroundColor: 'rgb(0,0,0)',
             padding: '1rem',
           }}
         >
@@ -352,17 +396,41 @@ export default function PhotoGallery() {
         document.body
       )}
 
-      {/* Grok Dialog */}
-      {showGrokDialog && selectedPhotoForGrok && (
-        <GrokDialog
-          isOpen={showGrokDialog}
-          onClose={() => {
-            setShowGrokDialog(false);
-            setSelectedPhotoForGrok(null);
+      {/* Grok Dialog - portaled in a single wrapper so it always stacks above gallery (z 99999) */}
+      {mounted && showGrokDialog && selectedPhotoForGrok && typeof document !== 'undefined' && document.body && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="AiID Bird Identification"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2147483647,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'auto',
           }}
-          imageUrl={selectedPhotoForGrok.image_url}
-          photoId={selectedPhotoForGrok.id}
-        />
+        >
+          <GrokDialog
+            isOpen={showGrokDialog}
+            onClose={() => {
+              setShowGrokDialog(false);
+              setSelectedPhotoForGrok(null);
+            }}
+            imageUrl={selectedPhotoForGrok.image_url}
+            photoId={selectedPhotoForGrok.id}
+            onIdentificationComplete={(id, species) => {
+              setPhotoOfMonth((prev) =>
+                prev?.id === id ? { ...prev, species: species ?? prev.species } : prev
+              );
+              setGalleryPhotos((prev) =>
+                prev.map((p) => (p.id === id ? { ...p, species: species ?? p.species } : p))
+              );
+            }}
+          />
+        </div>,
+        document.body
       )}
     </>
   );

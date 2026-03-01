@@ -8,17 +8,74 @@ interface GrokDialogProps {
   onClose: () => void;
   imageUrl: string;
   photoId: number;
+  onIdentificationComplete?: (photoId: number, species: string | null) => void;
 }
 
-export default function GrokDialog({ isOpen, onClose, imageUrl, photoId }: GrokDialogProps) {
+function renderResultParagraphs(result: string) {
+  return result.split('\n\n').map((paragraph, idx) => {
+    if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
+      return (
+        <h4 key={idx} className="text-emerald-200 font-semibold text-base mt-4 mb-2">
+          {paragraph.replace(/\*\*/g, '')}
+        </h4>
+      );
+    }
+    if (paragraph.includes('**') && paragraph.includes('*')) {
+      const parts = paragraph.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
+      return (
+        <p key={idx} className="mb-2">
+          {parts.map((part, partIdx) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={partIdx} className="text-emerald-200">{part.slice(2, -2)}</strong>;
+            }
+            if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
+              return <em key={partIdx} className="text-emerald-200/90">{part.slice(1, -1)}</em>;
+            }
+            if (part.startsWith('- ')) {
+              return <li key={partIdx} className="ml-4 list-disc">{part.slice(2)}</li>;
+            }
+            return <span key={partIdx}>{part}</span>;
+          })}
+        </p>
+      );
+    }
+    if (paragraph.startsWith('- ')) {
+      return (
+        <ul key={idx} className="list-disc ml-6 mb-2">
+          <li>{paragraph.slice(2)}</li>
+        </ul>
+      );
+    }
+    if (paragraph.startsWith('---')) {
+      return <hr key={idx} className="border-emerald-500/30 my-4" />;
+    }
+    return (
+      <p key={idx} className="mb-2">
+        {paragraph.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, partIdx) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={partIdx} className="text-emerald-200">{part.slice(2, -2)}</strong>;
+          }
+          if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
+            return <em key={partIdx} className="text-emerald-200/90">{part.slice(1, -1)}</em>;
+          }
+          return <span key={partIdx}>{part}</span>;
+        })}
+      </p>
+    );
+  });
+}
+
+export default function GrokDialog({ isOpen, onClose, imageUrl, photoId, onIdentificationComplete }: GrokDialogProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showResultPopup, setShowResultPopup] = useState(false);
 
   const identifyBird = async () => {
     setLoading(true);
     setError(null);
     setResult(null);
+    setShowResultPopup(false);
 
     try {
       const response = await fetch(`/api/photos/${photoId}/grok`, {
@@ -31,7 +88,11 @@ export default function GrokDialog({ isOpen, onClose, imageUrl, photoId }: GrokD
       }
 
       const data = await response.json();
-      setResult(data.identification || 'Bird identification completed');
+      const identification = data.identification || 'Bird identification completed';
+      setResult(identification);
+      setShowResultPopup(true);
+      const species = data.species ?? null;
+      onIdentificationComplete?.(photoId, species);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -39,13 +100,18 @@ export default function GrokDialog({ isOpen, onClose, imageUrl, photoId }: GrokD
     }
   };
 
+  const closeResultPopup = () => {
+    setShowResultPopup(false);
+    setResult(null);
+    onClose();
+  };
+
   useEffect(() => {
     if (isOpen) {
-      // Reset state when dialog opens
       setResult(null);
       setError(null);
       setLoading(false);
-      // Start identification
+      setShowResultPopup(false);
       identifyBird();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -54,118 +120,105 @@ export default function GrokDialog({ isOpen, onClose, imageUrl, photoId }: GrokD
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-emerald-900/95 backdrop-blur-md rounded-lg border border-emerald-500/20 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-emerald-900/95 backdrop-blur-md border-b border-emerald-500/20 p-4 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-white">AiID - Bird Identification</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-2 bg-emerald-800/90 text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors border border-emerald-600/50"
-          >
-            <X size={24} />
-          </button>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          {/* Image */}
-          <div className="bg-emerald-950/40 rounded-lg overflow-hidden border border-emerald-500/20">
-            <img
-              src={imageUrl}
-              alt="Bird photo for identification"
-              className="w-full h-auto max-h-96 object-contain"
-            />
+    <>
+      {/* Main dialog: image + loading or error (hidden when result popup is open) */}
+      {!showResultPopup && (
+      <div className="fixed inset-0 bg-black flex items-center justify-center p-4" style={{ zIndex: 100001 }}>
+        <div className="bg-emerald-900 rounded-lg border border-emerald-500/30 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="sticky top-0 bg-emerald-900 border-b border-emerald-500/30 p-4 flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-white">AiID - Bird Identification</h2>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md p-2 bg-emerald-800 text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors border border-emerald-600/50"
+            >
+              <X size={24} />
+            </button>
           </div>
 
-          {/* Loading State */}
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-              <Loader2 className="text-emerald-400 animate-spin" size={48} />
-              <p className="text-emerald-200/70">Analyzing bird image with Google Gemini AI...</p>
+          <div className="p-6 space-y-6">
+            <div className="bg-emerald-950 rounded-lg overflow-hidden border border-emerald-500/30 flex justify-center items-center p-3">
+              <img
+                src={imageUrl}
+                alt="Bird photo for identification"
+                className="object-contain"
+                style={{ maxWidth: 220, maxHeight: 180 }}
+              />
             </div>
-          )}
 
-          {/* Error State */}
-          {error && !loading && (
-            <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-4">
-              <p className="text-red-200 font-medium">Error</p>
-              <p className="text-red-300/70 text-sm mt-1">{error}</p>
-              <button
-                type="button"
-                onClick={identifyBird}
-                className="mt-4 px-4 py-2 rounded-md bg-red-700 text-white border border-red-600 hover:bg-red-600 active:bg-red-800 transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          )}
-
-          {/* Result */}
-          {result && !loading && (
-            <div className="bg-emerald-950/40 rounded-lg border border-emerald-500/20 p-6">
-              <h3 className="text-lg font-semibold text-emerald-200 mb-4">Identification Result</h3>
-              <div className="prose prose-invert max-w-none">
-                <div className="text-emerald-100 whitespace-pre-wrap leading-relaxed space-y-4">
-                  {result.split('\n\n').map((paragraph, idx) => {
-                    // Handle markdown-style formatting
-                    if (paragraph.startsWith('**') && paragraph.endsWith('**')) {
-                      return (
-                        <h4 key={idx} className="text-emerald-200 font-semibold text-base mt-4 mb-2">
-                          {paragraph.replace(/\*\*/g, '')}
-                        </h4>
-                      );
-                    }
-                    if (paragraph.includes('**') && paragraph.includes('*')) {
-                      // Handle bold and italic text
-                      const parts = paragraph.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g);
-                      return (
-                        <p key={idx} className="mb-2">
-                          {parts.map((part, partIdx) => {
-                            if (part.startsWith('**') && part.endsWith('**')) {
-                              return <strong key={partIdx} className="text-emerald-200">{part.slice(2, -2)}</strong>;
-                            }
-                            if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
-                              return <em key={partIdx} className="text-emerald-200/90">{part.slice(1, -1)}</em>;
-                            }
-                            if (part.startsWith('- ')) {
-                              return <li key={partIdx} className="ml-4 list-disc">{part.slice(2)}</li>;
-                            }
-                            return <span key={partIdx}>{part}</span>;
-                          })}
-                        </p>
-                      );
-                    }
-                    if (paragraph.startsWith('- ')) {
-                      return (
-                        <ul key={idx} className="list-disc ml-6 mb-2">
-                          <li>{paragraph.slice(2)}</li>
-                        </ul>
-                      );
-                    }
-                    if (paragraph.startsWith('---')) {
-                      return <hr key={idx} className="border-emerald-500/30 my-4" />;
-                    }
-                    return (
-                      <p key={idx} className="mb-2">
-                        {paragraph.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, partIdx) => {
-                          if (part.startsWith('**') && part.endsWith('**')) {
-                            return <strong key={partIdx} className="text-emerald-200">{part.slice(2, -2)}</strong>;
-                          }
-                          if (part.startsWith('*') && part.endsWith('*') && !part.startsWith('**')) {
-                            return <em key={partIdx} className="text-emerald-200/90">{part.slice(1, -1)}</em>;
-                          }
-                          return <span key={partIdx}>{part}</span>;
-                        })}
-                      </p>
-                    );
-                  })}
-                </div>
+            {loading && (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <Loader2 className="text-emerald-400 animate-spin" size={48} />
+                <p className="text-emerald-200/70">Analyzing bird image with Google Gemini AI...</p>
               </div>
-            </div>
-          )}
+            )}
+
+            {error && !loading && (
+              <div className="bg-red-900 border border-red-500/50 rounded-lg p-4">
+                <p className="text-red-200 font-medium">Error</p>
+                <p className="text-red-300/70 text-sm mt-1">{error}</p>
+                <button
+                  type="button"
+                  onClick={identifyBird}
+                  className="mt-4 px-4 py-2 rounded-md bg-red-700 text-white border border-red-600 hover:bg-red-600 active:bg-red-800 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+      )}
+
+      {/* Result popup: shown when identification is ready */}
+      {showResultPopup && result && (
+        <div className="fixed inset-0 flex items-center justify-center p-4 bg-black" style={{ zIndex: 100002 }} aria-modal="true">
+          <div className="bg-emerald-900 rounded-xl border border-emerald-500/30 shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-emerald-500/30 bg-emerald-800 shrink-0">
+              <h3 className="text-lg font-semibold text-emerald-100">Identification Result</h3>
+              <button
+                type="button"
+                onClick={closeResultPopup}
+                className="rounded-md p-2 bg-emerald-700 text-emerald-100 hover:bg-emerald-600 hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <X size={22} />
+              </button>
+            </div>
+            <div className="shrink-0 flex justify-center bg-emerald-950/80 py-3 px-4 border-b border-emerald-500/20">
+              <img
+                src={imageUrl}
+                alt="Bird photo"
+                className="object-contain rounded-lg border border-emerald-500/30"
+                style={{ maxWidth: 220, maxHeight: 160 }}
+              />
+            </div>
+            <div
+              className="aid-result-scroll p-5 flex-1 min-h-0 border-b border-emerald-500/20"
+              style={{
+                maxHeight: '55vh',
+                scrollbarGutter: 'stable',
+                WebkitOverflowScrolling: 'touch',
+              }}
+            >
+              <div className="text-emerald-100 whitespace-pre-wrap leading-relaxed space-y-4 pr-2">
+                {renderResultParagraphs(result)}
+              </div>
+            </div>
+            <div className="p-4 border-t border-emerald-500/30 bg-emerald-800 shrink-0">
+              <button
+                type="button"
+                onClick={closeResultPopup}
+                className="w-full py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-500 active:bg-emerald-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

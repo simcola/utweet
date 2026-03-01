@@ -44,17 +44,20 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // 'month' for photo of the month, null for gallery
     
     if (type === 'month') {
-      // Get photo of the month (most likes in last 30 days)
+      // Photo of the month = approved photo from last 30 days with the most likes (from photo_likes table)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       const result = await pool.query(
         `SELECT 
-          p.*
+          p.*,
+          COUNT(pl.id) AS like_count
         FROM photos p
+        LEFT JOIN photo_likes pl ON p.id = pl.photo_id
         WHERE p.approved = true 
           AND p.created_at >= $1
-        ORDER BY p.likes DESC, p.created_at DESC
+        GROUP BY p.id
+        ORDER BY like_count DESC, p.created_at DESC
         LIMIT 1`,
         [thirtyDaysAgo]
       );
@@ -65,15 +68,8 @@ export async function GET(request: NextRequest) {
 
       const photo = result.rows[0];
       const clientIP = getClientIP(request);
-      
-      // Get actual like count from photo_likes table
-      const likeCountResult = await pool.query(
-        'SELECT COUNT(*) as count FROM photo_likes WHERE photo_id = $1',
-        [photo.id]
-      );
-      const actualLikeCount = parseInt(likeCountResult.rows[0].count) || 0;
-      
-      // Check if user has liked this photo
+      const actualLikeCount = parseInt(photo.like_count) || 0;
+
       const likeCheck = await pool.query(
         'SELECT id FROM photo_likes WHERE photo_id = $1 AND user_ip = $2',
         [photo.id, clientIP]
@@ -174,14 +170,14 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const username = formData.get('username') as string;
-    const email = formData.get('email') as string;
+    const username = (formData.get('username') as string)?.trim() ?? '';
+    const email = (formData.get('email') as string)?.trim() ?? '';
     const location = formData.get('location') as string;
     const species = formData.get('species') as string;
 
-    if (!file || !username || !email) {
+    if (!file) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Please select a photo to upload' },
         { status: 400 }
       );
     }

@@ -134,8 +134,8 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!file || !username || !email) {
-      setError('Please fill in all required fields');
+    if (!file) {
+      setError('Please select a photo to upload');
       return;
     }
 
@@ -145,8 +145,8 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('username', username);
-      formData.append('email', email);
+      formData.append('username', username.trim() || '');
+      formData.append('email', email.trim() || '');
       formData.append('location', location);
       formData.append('species', species);
 
@@ -195,7 +195,7 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-2 sm:p-4"
+      className="fixed inset-0 bg-black z-[60] flex items-center justify-center p-2 sm:p-4"
       onClick={handleBackdropClick}
       onTouchStart={(e) => {
         // Handle touch events for mobile
@@ -206,16 +206,16 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
     >
       <div 
         ref={dialogRef}
-        className="bg-emerald-900/95 backdrop-blur-md rounded-lg border border-emerald-500/20 max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl"
+        className="bg-emerald-900 rounded-lg border border-emerald-500/30 max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-emerald-500/20 sticky top-0 bg-emerald-900/95 backdrop-blur-md z-10">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-emerald-500/30 sticky top-0 bg-emerald-900 z-10">
           <h2 className="text-xl sm:text-2xl font-semibold text-white">Upload Photo</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-2 -mr-2 touch-manipulation bg-emerald-800/80 text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors border border-emerald-600/50"
+            className="rounded-md p-2 -mr-2 touch-manipulation bg-emerald-800 text-emerald-100 hover:bg-emerald-700 hover:text-white transition-colors border border-emerald-600/50"
             aria-label="Close dialog"
           >
             <X size={24} />
@@ -231,30 +231,28 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
 
           <div>
             <label className="block text-sm font-medium text-emerald-200 mb-2">
-              Username *
+              Username
             </label>
             <input
               type="text"
-              required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 sm:py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-base sm:text-sm"
-              placeholder="Enter your username"
+              className="w-full px-4 py-3 sm:py-2 bg-emerald-950 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-base sm:text-sm"
+              placeholder="Username (optional)"
               autoComplete="username"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-emerald-200 mb-2">
-              Email *
+              Email
             </label>
             <input
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 sm:py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-base sm:text-sm"
-              placeholder="Enter your email"
+              className="w-full px-4 py-3 sm:py-2 bg-emerald-950 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-base sm:text-sm"
+              placeholder="Email (optional)"
               autoComplete="email"
               inputMode="email"
             />
@@ -268,7 +266,7 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              className="w-full px-4 py-3 sm:py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-base sm:text-sm"
+              className="w-full px-4 py-3 sm:py-2 bg-emerald-950 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-base sm:text-sm"
               placeholder="Where was this photo taken? (optional)"
               autoComplete="off"
             />
@@ -282,7 +280,7 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
               type="text"
               value={species}
               onChange={(e) => setSpecies(e.target.value)}
-              className="w-full px-4 py-3 sm:py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-base sm:text-sm"
+              className="w-full px-4 py-3 sm:py-2 bg-emerald-950 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400 text-base sm:text-sm"
               placeholder="Bird species (optional - can be identified by AI)"
               autoComplete="off"
             />
@@ -303,7 +301,7 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
               />
               <label
                 htmlFor="photo-upload"
-                className="flex items-center justify-center w-full px-4 py-8 sm:py-8 bg-emerald-950/50 border-2 border-dashed border-emerald-500/30 rounded-md cursor-pointer hover:border-emerald-500/50 active:border-emerald-500/70 transition-colors touch-manipulation"
+                className="flex items-center justify-center w-full px-4 py-8 sm:py-8 bg-emerald-950 border-2 border-dashed border-emerald-500/30 rounded-md cursor-pointer hover:border-emerald-500/50 active:border-emerald-500/70 transition-colors touch-manipulation"
               >
                 {preview ? (
                   <div className="relative w-full flex justify-center">

@@ -27,3 +27,22 @@ button {
   text-wrap: balance;
 }
 
+/* AiID result popup: always show scrollbar so user can scroll full result */
+.aid-result-scroll {
+  overflow-y: scroll;
+}
+.aid-result-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+.aid-result-scroll::-webkit-scrollbar-track {
+  background: rgb(6 78 59); /* emerald-800 */
+  border-radius: 6px;
+}
+.aid-result-scroll::-webkit-scrollbar-thumb {
+  background: rgb(20 184 166); /* emerald-400 */
+  border-radius: 6px;
+}
+.aid-result-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(45 212 191); /* teal-300 */
+}
+
