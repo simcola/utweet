@@ -10,8 +10,17 @@ frontend:
           else
             echo "DATABASE_URL is set: NO"
           fi
+        - |
+          if [ -n "$GEMINI_API_KEY" ]; then
+            echo "GEMINI_API_KEY is set: YES"
+          else
+            echo "GEMINI_API_KEY is set: NO"
+          fi
     build:
       commands:
+        # Make Amplify env vars available to Next.js server (API routes / Lambda)
+        - env | grep -e DATABASE_URL >> .env.production || true
+        - env | grep -e GEMINI_API_KEY >> .env.production || true
         - npm run build
   artifacts:
     baseDirectory: .next
