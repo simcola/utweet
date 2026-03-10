@@ -59,7 +59,8 @@ GEMINI_API_KEY=your-gemini-api-key-here
 1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
 2. Sign in with your Google account
 3. Create a new API key
-4. Add it to your `.env.local` file as `GEMINI_API_KEY`
+4. **Local:** Add it to your `.env.local` file as `GEMINI_API_KEY`
+5. **AWS Amplify:** In Amplify Console → Your app → Environment variables, add `GEMINI_API_KEY` with your key, then Save and redeploy (e.g. "Clear cache and deploy" or push a new commit)
 
 ### 4. Run Development Server
 

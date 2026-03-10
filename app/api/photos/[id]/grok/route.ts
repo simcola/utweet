@@ -231,12 +231,13 @@ export async function POST(
           error: 'Gemini API key not configured',
           identification: `**Bird Identification - AiID Analysis**\n\n` +
             `**Error:** Gemini API key is not configured.\n\n` +
-            `Please add GEMINI_API_KEY to your .env.local file:\n` +
-            `\`\`\`\n` +
-            `GEMINI_API_KEY=your-api-key-here\n` +
-            `\`\`\`\n\n` +
-            `Get your API key from: https://aistudio.google.com/app/apikey\n\n` +
-            `After adding the key, restart your development server.`
+            `**Local development:** Add to \`.env.local\`:\n` +
+            `GEMINI_API_KEY=your-api-key-here\n\n` +
+            `**AWS Amplify:**\n` +
+            `1. Open AWS Amplify Console → Your app → Environment variables\n` +
+            `2. Add variable: Name \`GEMINI_API_KEY\`, Value = your API key\n` +
+            `3. Save, then redeploy (e.g. Clear cache and deploy, or push a new commit)\n\n` +
+            `Get your API key: https://aistudio.google.com/app/apikey`
         },
         { status: 500 }
       );
