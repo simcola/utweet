@@ -10,7 +10,11 @@ interface ItemCardProps {
 export default function ItemCard({ item }: ItemCardProps) {
   const locationLabel = item.is_global
     ? 'Global'
-    : item.country?.name || item.region?.name || 'Regional';
+    : item.country
+      ? item.country.code === 'US' && item.us_states?.length
+        ? `${item.country.name} (${item.us_states.join(', ')})`
+        : item.country.name
+      : item.region?.name || 'Regional';
 
   return (
     <div className="py-1">

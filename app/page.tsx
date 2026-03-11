@@ -16,6 +16,8 @@ export default function Home() {
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [selectedRegion, setSelectedRegion] = useState<string>('ALL');
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [selectedUsStates, setSelectedUsStates] = useState<string[]>([]);
+  const [usStatesList, setUsStatesList] = useState<{ code: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadCountries = async (regionCode: string) => {
@@ -39,11 +41,12 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [regionsRes, categoriesRes, itemsRes, newsRes] = await Promise.all([
+        const [regionsRes, categoriesRes, itemsRes, newsRes, usStatesRes] = await Promise.all([
           fetch('/api/regions'),
           fetch('/api/categories'),
           fetch('/api/items'),
-          fetch('/api/news', { cache: 'no-store' }), // Always fetch fresh news on page load
+          fetch('/api/news', { cache: 'no-store' }),
+          fetch('/api/us-states'),
         ]);
 
         // Helper to parse JSON or get error text
@@ -62,11 +65,12 @@ export default function Home() {
           return await res.json();
         };
 
-        const [regionsData, categoriesData, itemsData, newsData] = await Promise.all([
+        const [regionsData, categoriesData, itemsData, newsData, usStatesData] = await Promise.all([
           parseResponse(regionsRes, 'Regions'),
           parseResponse(categoriesRes, 'Categories'),
           parseResponse(itemsRes, 'Items'),
           parseResponse(newsRes, 'News'),
+          parseResponse(usStatesRes, 'US States'),
         ]);
 
         // Log counts for debugging
@@ -102,6 +106,7 @@ export default function Home() {
         
         setCategories(organizedCategories);
         setItems(Array.isArray(itemsData) ? itemsData : []);
+        setUsStatesList(Array.isArray(usStatesData) ? usStatesData : []);
         const sortedNews = Array.isArray(newsData)
           ? [...newsData].sort(
               (a: NewsArticle, b: NewsArticle) =>
@@ -126,7 +131,8 @@ export default function Home() {
   useEffect(() => {
     if (selectedRegion) {
       loadCountries(selectedRegion);
-      setSelectedCountries([]); // Clear selected countries when region changes
+      setSelectedCountries([]);
+      setSelectedUsStates([]);
     }
   }, [selectedRegion]);
 
@@ -142,6 +148,17 @@ export default function Home() {
 
   const handleCountryRemove = (countryCode: string) => {
     setSelectedCountries(selectedCountries.filter(code => code !== countryCode));
+    if (countryCode === 'US') setSelectedUsStates([]);
+  };
+
+  const handleUsStateAdd = (stateCode: string) => {
+    if (!selectedUsStates.includes(stateCode)) {
+      setSelectedUsStates([...selectedUsStates, stateCode]);
+    }
+  };
+
+  const handleUsStateRemove = (stateCode: string) => {
+    setSelectedUsStates(selectedUsStates.filter(code => code !== stateCode));
   };
 
   if (loading) {
@@ -180,9 +197,13 @@ export default function Home() {
           countries={countries}
           selectedRegion={selectedRegion}
           selectedCountries={selectedCountries}
+          selectedUsStates={selectedUsStates}
+          usStatesList={usStatesList}
           onRegionChange={handleRegionChange}
           onCountryAdd={handleCountryAdd}
           onCountryRemove={handleCountryRemove}
+          onUsStateAdd={handleUsStateAdd}
+          onUsStateRemove={handleUsStateRemove}
         />
 
         {/* News and Photo Gallery - First Row */}
@@ -221,6 +242,7 @@ export default function Home() {
                   items={allCategoryItems}
                   regionCode={selectedRegion}
                   countryCodes={selectedCountries}
+                  selectedUsStates={selectedUsStates}
                 />
               </div>
             );

@@ -29,6 +29,8 @@ export interface Item {
   category?: Category;
   region?: Region;
   country?: Country;
+  /** US state codes (e.g. ['CA','NY']) when country is United States; empty = all US states */
+  us_states?: string[];
   average_rating?: number;
   rating_count?: number;
   like_count?: number;

@@ -2,15 +2,25 @@
 
 import { Region, Country } from '@/lib/types';
 import { X } from 'lucide-react';
+import { US_COUNTRY_CODE } from '@/lib/us-states';
+
+interface UsState {
+  code: string;
+  name: string;
+}
 
 interface RegionFilterProps {
   regions: Region[];
   countries: Country[];
   selectedRegion: string;
   selectedCountries: string[];
+  selectedUsStates: string[];
+  usStatesList: UsState[];
   onRegionChange: (regionCode: string) => void;
   onCountryAdd: (countryCode: string) => void;
   onCountryRemove: (countryCode: string) => void;
+  onUsStateAdd: (stateCode: string) => void;
+  onUsStateRemove: (stateCode: string) => void;
 }
 
 export default function RegionFilter({
@@ -18,33 +28,48 @@ export default function RegionFilter({
   countries,
   selectedRegion,
   selectedCountries,
+  selectedUsStates,
+  usStatesList,
   onRegionChange,
   onCountryAdd,
   onCountryRemove,
+  onUsStateAdd,
+  onUsStateRemove,
 }: RegionFilterProps) {
-  // Ensure regions is always an array
   const safeRegions = Array.isArray(regions) ? regions : [];
   const safeCountries = Array.isArray(countries) ? countries : [];
   const sortedCountries = safeCountries.slice().sort((a, b) => a.name.localeCompare(b.name));
-  
-  // Get selected country names for display
+  const safeUsStates = Array.isArray(usStatesList) ? usStatesList : [];
+  const hasUS = selectedCountries.includes(US_COUNTRY_CODE);
+
   const selectedCountryNames = selectedCountries
     .map(code => {
       const country = sortedCountries.find(c => c.code === code);
       return country ? { code, name: country.name } : null;
     })
     .filter((item): item is { code: string; name: string } => item !== null);
-  
-  // Filter out already selected countries from dropdown
+
   const availableCountries = sortedCountries.filter(
     country => !selectedCountries.includes(country.code)
   );
-  
+
+  const availableUsStates = safeUsStates.filter(
+    state => !selectedUsStates.includes(state.code)
+  );
+
   const handleCountrySelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const countryCode = e.target.value;
     if (countryCode && !selectedCountries.includes(countryCode)) {
       onCountryAdd(countryCode);
-      e.target.value = ''; // Reset dropdown
+      e.target.value = '';
+    }
+  };
+
+  const handleUsStateSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const stateCode = e.target.value;
+    if (stateCode && !selectedUsStates.includes(stateCode)) {
+      onUsStateAdd(stateCode);
+      e.target.value = '';
     }
   };
 
@@ -120,6 +145,58 @@ export default function RegionFilter({
             </div>
           )}
         </div>
+
+        {hasUS && (
+          <div className="flex-1 flex flex-col">
+            <label className="text-xs font-semibold uppercase tracking-wide text-emerald-200 block mb-2.5">
+              State <span className="normal-case opacity-90">(United States only)</span>
+            </label>
+            <div className="relative">
+              <select
+                onChange={handleUsStateSelect}
+                value=""
+                className="w-full appearance-none rounded-lg border-2 border-emerald-500/40 bg-emerald-950/80 px-4 py-2.5 text-base font-medium text-white transition-all hover:border-emerald-400/60 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-emerald-500/40 shadow-sm"
+                disabled={availableUsStates.length === 0}
+              >
+                <option value="" className="bg-emerald-900 text-white font-medium">
+                  {availableUsStates.length === 0 ? 'All states selected' : 'Select states...'}
+                </option>
+                {availableUsStates.map((state) => (
+                  <option key={state.code} value={state.code} className="bg-emerald-900 text-white font-medium">
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-emerald-300 text-sm">
+                ▼
+              </span>
+            </div>
+            {selectedUsStates.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2.5">
+                {selectedUsStates.map((code) => {
+                  const state = safeUsStates.find(s => s.code === code);
+                  const name = state?.name ?? code;
+                  return (
+                    <span
+                      key={code}
+                      className="inline-flex items-center gap-2 rounded-full bg-emerald-500/30 border border-emerald-400/40 px-3.5 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-500/40 transition-colors"
+                    >
+                      <span>{name}</span>
+                      <button
+                        type="button"
+                        onClick={() => onUsStateRemove(code)}
+                        className="rounded-full p-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400 bg-emerald-700/80 text-white hover:bg-emerald-600"
+                        aria-label={`Remove ${name}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

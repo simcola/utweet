@@ -37,9 +37,11 @@ export default function AdminPage() {
     category_id: '',
     region_id: '',
     country_id: '',
+    us_states: [] as string[],
     is_global: false,
     image_url: '',
   });
+  const [usStatesList, setUsStatesList] = useState<{ code: string; name: string }[]>([]);
 
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
@@ -131,6 +133,11 @@ export default function AdminPage() {
       setRegions(Array.isArray(regionsData) ? regionsData.filter((r: Region) => r.code !== 'ALL') : []);
       setCountries(Array.isArray(countriesData) ? countriesData : []);
       setItems(Array.isArray(itemsData) ? itemsData : []);
+      const usStatesRes = await fetch('/api/us-states');
+      if (usStatesRes.ok) {
+        const usStatesData = await usStatesRes.json();
+        setUsStatesList(Array.isArray(usStatesData) ? usStatesData : []);
+      }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -200,6 +207,7 @@ export default function AdminPage() {
           category_id: parseInt(formData.category_id),
           region_id: formData.region_id ? parseInt(formData.region_id) : null,
           country_id: formData.country_id ? parseInt(formData.country_id) : null,
+          us_states: formData.us_states,
         }),
       });
 
@@ -298,6 +306,7 @@ export default function AdminPage() {
       category_id: item.category_id.toString(),
       region_id: item.region_id?.toString() || '',
       country_id: item.country_id?.toString() || '',
+      us_states: item.us_states && item.us_states.length ? [...item.us_states] : [],
       is_global: item.is_global,
       image_url: item.image_url || '',
     });
@@ -327,6 +336,7 @@ export default function AdminPage() {
       category_id: '',
       region_id: '',
       country_id: '',
+      us_states: [],
       is_global: false,
       image_url: '',
     });
@@ -349,6 +359,9 @@ export default function AdminPage() {
   const filteredCountries = selectedRegionId
     ? countries.filter((country) => country.region_id === selectedRegionId)
     : countries;
+  const selectedCountry = formData.country_id ? countries.find((c) => c.id === parseInt(formData.country_id, 10)) : null;
+  const isUS = selectedCountry?.code === 'US';
+  const availableUsStates = usStatesList.filter((s) => !formData.us_states.includes(s.code));
 
   const getCategoryName = (categoryId: number) => {
     const category = categories.find((c) => c.id === categoryId);
@@ -541,27 +554,27 @@ export default function AdminPage() {
                       className="w-full px-3 py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-emerald-200 mb-1">
-                        Category *
-                      </label>
-                      <select
-                        required
-                        value={formData.category_id}
-                        onChange={(e) =>
-                          setFormData({ ...formData, category_id: e.target.value })
-                        }
-                        className="w-full px-3 py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                      >
-                        <option value="">Select a category</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-emerald-200 mb-1">
+                      Category *
+                    </label>
+                    <select
+                      required
+                      value={formData.category_id}
+                      onChange={(e) =>
+                        setFormData({ ...formData, category_id: e.target.value })
+                      }
+                      className="w-full px-3 py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-emerald-200 mb-1">
                         Region
@@ -574,6 +587,7 @@ export default function AdminPage() {
                             ...formData,
                             region_id: value,
                             country_id: '',
+                            us_states: [],
                           });
                         }}
                         className="w-full px-3 py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
@@ -586,45 +600,101 @@ export default function AdminPage() {
                         ))}
                       </select>
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-emerald-200 mb-1">
-                      Country
-                    </label>
-                    <select
-                      value={formData.country_id}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (!value) {
-                          setFormData({ ...formData, country_id: '' });
-                          return;
-                        }
+                    <div>
+                      <label className="block text-sm font-medium text-emerald-200 mb-1">
+                        Country
+                      </label>
+                      <select
+                        value={formData.country_id}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          if (!value) {
+                            setFormData({ ...formData, country_id: '', us_states: [] });
+                            return;
+                          }
 
-                        const selected = countries.find(
-                          (country) => country.id === parseInt(value, 10)
-                        );
+                          const selected = countries.find(
+                            (country) => country.id === parseInt(value, 10)
+                          );
 
-                        setFormData({
-                          ...formData,
-                          country_id: value,
-                          region_id: selected
-                            ? selected.region_id.toString()
-                            : formData.region_id,
-                        });
-                      }}
-                      className="w-full px-3 py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                      disabled={filteredCountries.length === 0}
-                    >
-                      <option value="">None (Global)</option>
-                      {filteredCountries
-                        .slice()
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map((country) => (
-                          <option key={country.id} value={country.id}>
-                            {country.name}
-                          </option>
-                        ))}
-                    </select>
+                          setFormData({
+                            ...formData,
+                            country_id: value,
+                            region_id: selected
+                              ? selected.region_id.toString()
+                              : formData.region_id,
+                            us_states: selected?.code === 'US' ? formData.us_states : [],
+                          });
+                        }}
+                        className="w-full px-3 py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        disabled={filteredCountries.length === 0}
+                      >
+                        <option value="">None (Global)</option>
+                        {filteredCountries
+                          .slice()
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((country) => (
+                            <option key={country.id} value={country.id}>
+                              {country.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    {isUS ? (
+                      <div>
+                        <label className="block text-sm font-medium text-emerald-200 mb-1">
+                          State <span className="opacity-85">(United States only)</span>
+                        </label>
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const code = e.target.value;
+                            if (code && !formData.us_states.includes(code)) {
+                              setFormData({ ...formData, us_states: [...formData.us_states, code] });
+                            }
+                            e.target.value = '';
+                          }}
+                          className="w-full px-3 py-2 bg-emerald-950/50 border border-emerald-500/30 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                        >
+                          <option value="">Optional — leave empty for all US</option>
+                          {availableUsStates.map((state) => (
+                            <option key={state.code} value={state.code}>
+                              {state.name}
+                            </option>
+                          ))}
+                        </select>
+                        {formData.us_states.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {formData.us_states.map((code) => {
+                              const state = usStatesList.find((s) => s.code === code);
+                              return (
+                                <span
+                                  key={code}
+                                  className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/30 border border-emerald-400/40 px-3 py-1 text-sm text-white"
+                                >
+                                  {state?.name ?? code}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setFormData({
+                                        ...formData,
+                                        us_states: formData.us_states.filter((c) => c !== code),
+                                      })
+                                    }
+                                    className="rounded-full p-0.5 hover:bg-emerald-600"
+                                    aria-label={`Remove ${state?.name ?? code}`}
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="hidden sm:block" aria-hidden="true" />
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-emerald-200 mb-1">
@@ -651,6 +721,7 @@ export default function AdminPage() {
                           is_global: checked,
                           region_id: checked ? '' : formData.region_id,
                           country_id: checked ? '' : formData.country_id,
+                          us_states: checked ? [] : formData.us_states,
                         });
                       }}
                       className="h-4 w-4 text-emerald-600 focus:ring-emerald-400 border-emerald-500/30 rounded bg-emerald-950/50"
@@ -712,7 +783,13 @@ export default function AdminPage() {
                         <div className="text-sm text-emerald-200/70">
                           {item.is_global
                             ? 'Global'
-                            : item.country?.name || (item.region ? 'Region-wide' : 'N/A')}
+                            : item.country
+                              ? item.country.code === 'US' && item.us_states?.length
+                                ? `${item.country.name} (${item.us_states.join(', ')})`
+                                : item.country.name
+                              : item.region
+                                ? 'Region-wide'
+                                : 'N/A'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

@@ -3,19 +3,20 @@
 import { useEffect, useState } from 'react';
 import { Category, Item } from '@/lib/types';
 import ItemCard from './ItemCard';
+import { US_COUNTRY_CODE } from '@/lib/us-states';
 
 interface SectionProps {
   category: Category;
   items: Item[];
   regionCode: string;
   countryCodes: string[];
+  selectedUsStates: string[];
 }
 
-export default function Section({ category, items, regionCode, countryCodes }: SectionProps) {
+export default function Section({ category, items, regionCode, countryCodes, selectedUsStates }: SectionProps) {
   const regionFiltered = items.filter((item) => {
     if (regionCode === 'ALL') return true;
     if (item.is_global) return true;
-    // If item has no region, include it (fallback for items without region set)
     if (!item.region) return true;
     return item.region?.code === regionCode;
   });
@@ -23,9 +24,15 @@ export default function Section({ category, items, regionCode, countryCodes }: S
   const filteredItems = regionFiltered.filter((item) => {
     if (countryCodes.length === 0) return true;
     if (item.is_global) return true;
-    // If item has no country but country filter is set, exclude it unless it's global
     if (!item.country) return false;
-    return countryCodes.includes(item.country.code);
+    if (!countryCodes.includes(item.country.code)) return false;
+    // When filtering by US and user selected specific states, only include US items that apply to those states (or to all US)
+    if (item.country.code === US_COUNTRY_CODE && selectedUsStates.length > 0) {
+      const itemStates = item.us_states ?? [];
+      if (itemStates.length === 0) return true; // item applies to all US states
+      return itemStates.some((s) => selectedUsStates.includes(s));
+    }
+    return true;
   });
 
   // Show section even if empty, but with a message
@@ -40,7 +47,7 @@ export default function Section({ category, items, regionCode, countryCodes }: S
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [regionCode, countryCodes]);
+  }, [regionCode, countryCodes, selectedUsStates]);
 
   useEffect(() => {
     if (totalPages > 0 && currentPage > totalPages) {
