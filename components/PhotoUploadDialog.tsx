@@ -195,7 +195,11 @@ export default function PhotoUploadDialog({ onClose, onSuccess }: PhotoUploadDia
 
   return (
     <div 
-      className="fixed inset-0 bg-black z-[60] flex items-center justify-center p-2 sm:p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4"
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.78)',
+        backdropFilter: 'blur(6px)',
+      }}
       onClick={handleBackdropClick}
       onTouchStart={(e) => {
         // Handle touch events for mobile

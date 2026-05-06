@@ -241,7 +241,8 @@ export default function PhotoGallery() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgb(2, 44, 34)', /* emerald-950 solid */
+            backgroundColor: 'rgba(0, 0, 0, 0.78)',
+            backdropFilter: 'blur(6px)',
             padding: '1rem',
             overflow: 'hidden',
           }}
@@ -384,7 +385,8 @@ export default function PhotoGallery() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgb(0,0,0)',
+            backgroundColor: 'rgba(0, 0, 0, 0.78)',
+            backdropFilter: 'blur(6px)',
             padding: '1rem',
           }}
         >
