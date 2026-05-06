@@ -1,6 +1,6 @@
 // Remove duplicate rows from `items`, keeping the lowest `id` per duplicate group.
 //
-// Default: duplicate key = LOWER(TRIM(url)) for rows with a non-empty URL.
+// Default: duplicate key = normalized URL (trim, strip trailing /, http→https, drop www.).
 // Optional: --also-empty-url duplicates by title + category_id + region_id + country_id + is_global.
 //
 // Usage:
@@ -42,16 +42,9 @@ async function main() {
     const before = await client.query('SELECT COUNT(*)::int AS c FROM items');
     console.log(`📦 Items before: ${before.rows[0].c}`);
 
-    // Normalize URLs so https://x/y and http://x/y/ collapse together.
-    const urlNormExpr = `
-      LOWER(
-        REGEXP_REPLACE(
-          REGEXP_REPLACE(TRIM(BOTH FROM url), '/+$', ''),
-          '^http://',
-          'https://'
-        )
-      )
-    `;
+    /** Postgres expression for grouping “same” external URLs. */
+    const urlKeySql =
+      "LOWER(REGEXP_REPLACE(REGEXP_REPLACE(REGEXP_REPLACE(TRIM(BOTH FROM url), '/+$', ''), '^http://', 'https://'), '^https://www\\.', 'https://'))";
 
     const urlDupes = await client.query(`
       SELECT COUNT(*)::int AS n
@@ -59,7 +52,7 @@ async function main() {
         SELECT id FROM (
           SELECT id,
             ROW_NUMBER() OVER (
-              PARTITION BY ${urlNormExpr.replace(/\s+/g, ' ')}
+              PARTITION BY ${urlKeySql}
               ORDER BY id
             ) AS rn
           FROM items
@@ -81,7 +74,7 @@ async function main() {
                 ORDER BY id
               ) AS rn
             FROM items
-            WHERE url IS NULL OR TRIM(url) = ''
+            WHERE url IS NULL OR TRIM(BOTH FROM url) = ''
           ) x WHERE rn > 1
         ) d
       `);
@@ -101,7 +94,7 @@ async function main() {
         SELECT id FROM (
           SELECT id,
             ROW_NUMBER() OVER (
-              PARTITION BY ${urlNormExpr.replace(/\s+/g, ' ')}
+              PARTITION BY ${urlKeySql}
               ORDER BY id
             ) AS rn
           FROM items
@@ -124,7 +117,7 @@ async function main() {
                 ORDER BY id
               ) AS rn
             FROM items
-            WHERE url IS NULL OR TRIM(url) = ''
+            WHERE url IS NULL OR TRIM(BOTH FROM url) = ''
           ) sub
           WHERE rn > 1
         )
