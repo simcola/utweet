@@ -12,7 +12,8 @@
     "seed:curated": "node database/seed_curated_real.js",
     "seed:curated:truncate": "node database/seed_curated_real.js --truncate",
     "dedupe:items:dry": "node database/remove_duplicate_items.js --dry-run",
-    "dedupe:items": "node database/remove_duplicate_items.js"
+    "dedupe:items": "node database/remove_duplicate_items.js",
+    "dedupe:items:logical": "node database/remove_duplicate_items.js --also-logical-placement"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
