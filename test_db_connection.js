@@ -23,7 +23,16 @@ async function testConnection() {
 
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: (() => {
+    try {
+      const u = new URL(process.env.DATABASE_URL);
+      const host = (u.hostname || '').toLowerCase();
+      const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+      return isLocal ? false : { rejectUnauthorized: false };
+    } catch {
+      return process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+    }
+  })(),
   });
 
   try {

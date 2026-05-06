@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed:large": "node database/seed_large_data.js",
+    "seed:large:truncate": "node database/seed_large_data.js --truncate",
+    "seed:curated": "node database/seed_curated_real.js",
+    "seed:curated:truncate": "node database/seed_curated_real.js --truncate"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
