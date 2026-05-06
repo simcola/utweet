@@ -9,6 +9,7 @@
 //   node database/remove_duplicate_items.js --dry-run
 //   node database/remove_duplicate_items.js
 //   node database/remove_duplicate_items.js --also-empty-url
+//   node database/remove_duplicate_items.js --also-logical-placement
 
 require('dotenv').config({ path: '.env.local' });
 const { Pool } = require('pg');
