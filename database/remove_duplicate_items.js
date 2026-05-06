@@ -1,7 +1,9 @@
 // Remove duplicate rows from `items`, keeping the lowest `id` per duplicate group.
 //
 // Default: duplicate key = normalized URL (trim, strip trailing /, http→https, drop www.).
-// Optional: --also-empty-url duplicates by title + category_id + region_id + country_id + is_global.
+// Optional:
+//   --also-empty-url — duplicates with empty URL by title + category + region + country + global.
+//   --also-logical-placement — duplicates with same title + category + region + country + global (even if URLs differ).
 //
 // Usage:
 //   node database/remove_duplicate_items.js --dry-run
@@ -31,6 +33,7 @@ async function main() {
 
   const dryRun = process.argv.includes('--dry-run');
   const alsoEmpty = process.argv.includes('--also-empty-url');
+  const alsoLogical = process.argv.includes('--also-logical-placement');
 
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -61,6 +64,22 @@ async function main() {
       ) d
     `);
     console.log(`🔁 Duplicate rows by URL (would delete): ${urlDupes.rows[0].n}`);
+
+    const logicalDupes = await client.query(`
+      SELECT COUNT(*)::int AS n
+      FROM (
+        SELECT id FROM (
+          SELECT id,
+            ROW_NUMBER() OVER (
+              PARTITION BY category_id, COALESCE(region_id, -1), COALESCE(country_id, -1), is_global,
+                LOWER(TRIM(BOTH FROM title))
+              ORDER BY id
+            ) AS rn
+          FROM items
+        ) x WHERE rn > 1
+      ) d
+    `);
+    console.log(`🔁 Duplicate rows by title + placement (would delete with --also-logical-placement): ${logicalDupes.rows[0].n}`);
 
     let emptyDupes = { rows: [{ n: 0 }] };
     if (alsoEmpty) {
@@ -104,6 +123,26 @@ async function main() {
       )
     `);
     console.log(`🗑️  Deleted by duplicate URL: ${delUrl.rowCount}`);
+
+    let delLogical = { rowCount: 0 };
+    if (alsoLogical) {
+      delLogical = await client.query(`
+        DELETE FROM items
+        WHERE id IN (
+          SELECT id FROM (
+            SELECT id,
+              ROW_NUMBER() OVER (
+                PARTITION BY category_id, COALESCE(region_id, -1), COALESCE(country_id, -1), is_global,
+                  LOWER(TRIM(BOTH FROM title))
+                ORDER BY id
+              ) AS rn
+            FROM items
+          ) sub
+          WHERE rn > 1
+        )
+      `);
+      console.log(`🗑️  Deleted by duplicate title + placement: ${delLogical.rowCount}`);
+    }
 
     let delEmpty = { rowCount: 0 };
     if (alsoEmpty) {
